@@ -1,0 +1,25 @@
+name = "NumberGrundy"
+uuid = "5b3e2a7c-9d41-4f8e-a6c2-1e7d0b9f3a51"
+version = "0.1.0"
+authors = ["Davi Gomes Florencio <davigomesflorencio@gmail.com>"]
+
+[deps]
+Graphs = "86223c79-3864-5bf0-83f7-82e725a168b6"
+HiGHS = "87dc4568-4c63-4d18-b0c0-bb2238e4078b"
+JuMP = "4076af6c-e467-56ae-b986-b466b2749572"
+Printf = "de0858da-6303-5e67-8744-51eddeeeb8d7"
+Random = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"
+
+[compat]
+julia = "1.10"
+Graphs = "1.15.0"
+HiGHS = "1.26.1"
+JuMP = "1.32.1"
+Printf = "1"
+Random = "1"
+
+[extras]
+Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
+
+[targets]
+test = ["Test"]
