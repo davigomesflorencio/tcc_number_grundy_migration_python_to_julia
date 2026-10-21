@@ -11,6 +11,8 @@ Organização:
 - `limites/`     decomposição de vértices, limite superior Stair Factor e limite inferior LB-DEG
 - `cliques/`     Bron–Kerbosch (cliques maximais / conjuntos independentes maximais)
 - `exatos/`      algoritmos exatos: Programação Dinâmica (PDG) e Branch and Bound (BBG)
+- `v2/`          versões melhoradas (BBG v2: poda válida, parada antecipada,
+                 LB heurístico e verificação incremental de Grundy)
 - `pli/`         formulações de Programação Linear Inteira (F_N, F_DELTA, F_STF, F_PROD)
                  e modelos auxiliares de coloração própria
 
@@ -48,6 +50,9 @@ include("exatos/branch_and_bound.jl")
 include("pli/formulacao_grundy.jl")
 include("pli/modelos_coloracao.jl")
 
+# Versão 2 (melhorias sobre os algoritmos do TCC)
+include("v2/branch_and_bound.jl")
+
 export
     # grafos
     ler_gml, escrever_gml, grafo_aleatorio, grafo_stacked_book,
@@ -61,5 +66,7 @@ export
     Resultado, pdg, bbg,
     # pli
     pli_grundy, modelo_grundy, limite_formulacao, FORMULACOES,
-    pli_numero_cromatico
+    pli_numero_cromatico,
+    # v2
+    bbg_v2
 end

@@ -19,6 +19,10 @@ const ALGORITMOS = Dict{String,Function}(
     "PLI_DELTA" => (g, t) -> pli_grundy(g, :delta; tempo_limite=t),
     "PLI_STF"   => (g, t) -> pli_grundy(g, :stf; tempo_limite=t),
     "PLI_6"     => (g, t) -> pli_grundy(g, :prod; tempo_limite=t),
+    # v2
+    "BB2_DELTA" => (g, t) -> bbg_v2(g, grau_maximo(g) + 1; tempo_limite=t),
+    "BB2_STF"   => (g, t) -> bbg_v2(g, stair_factor(g); tempo_limite=t),
+    "BB2_6"     => (g, t) -> bbg_v2(g, 6; tempo_limite=t),
 )
 
 densidade(g) = nv(g) <= 1 ? 0.0 : 2ne(g) / (nv(g) * (nv(g) - 1))

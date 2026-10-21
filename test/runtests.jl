@@ -112,6 +112,33 @@ resolvido(l) = parse(Float64, l["tempo"]) < 900
         end
     end
 
+    @testset "v2: BBG v2 é exato (comparado com a PDG)" begin
+        rng = MersenneTwister(2026)
+        for n in 4:10, p in (0.2, 0.35, 0.5, 0.65, 0.8), _ in 1:12
+            g = grafo_aleatorio(n, p; rng)
+            esperado = pdg(g).grundy
+            r = bbg_v2(g, grau_maximo(g) + 1)
+            @test r.otimo
+            @test r.grundy == esperado
+            @test eh_coloracao_grundy(g, r.coloracao) && maximum(r.coloracao) == r.grundy
+            r_sem_lb = bbg_v2(g, nv(g); lb_heuristico=false)
+            @test r_sem_lb.grundy == esperado
+        end
+        # grafo em que a poda do BBG original perde o ótimo (Γ = 4, BBG v1 devolve 3)
+        g = SimpleGraph(6)
+        for (u, v) in [(1, 3), (1, 6), (2, 3), (2, 4), (2, 5), (3, 6), (4, 6)]
+            add_edge!(g, u, v)
+        end
+        @test pdg(g).grundy == 4
+        @test bbg_v2(g, grau_maximo(g) + 1).grundy == 4
+        # instâncias do TCC
+        for l in ler_csv(joinpath(RAIZ, "dados", "PDG.csv"))
+            resolvido(l) || continue
+            g = ler_gml(joinpath(RAIZ, "instancias", "classe", "classe_graph_$(l["n"])_$(l["m"])"))
+            @test bbg_v2(g, stair_factor(g)).grundy == grundy(l)
+        end
+    end
+
     @testset "Limite de tempo devolve melhor valor parcial" begin
         g = ler_gml(joinpath(RAIZ, "instancias", "random", "random_graph_0_30_0.5.gml"))
         r = bbg(g, nv(g); tempo_limite=0.5)

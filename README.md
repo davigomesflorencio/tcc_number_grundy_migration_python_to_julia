@@ -58,7 +58,9 @@ src/
   cliques/                     bron_kerbosch.jl
   exatos/                      resultado.jl, programacao_dinamica.jl, branch_and_bound.jl
   pli/                         formulacao_grundy.jl, modelos_coloracao.jl
+  v2/                          branch_and_bound.jl (BBG v2, ver seção "v2")
 experimentos/                  scripts dos testes computacionais
+  v2/                          comparar_bbg.jl (BBG original × BBG v2)
 test/runtests.jl               testes (inclui comparação com os resultados do TCC)
 instancias/                    instâncias originais (random/*.gml, classe/*)
 dados/, dados_random/, tempo/, TabelasTCC/   resultados originais do TCC (Python)
@@ -118,6 +120,40 @@ julia --project=. -e "using Pkg; Pkg.test()"
 
 Os testes conferem que, nas instâncias do TCC, o gerador Stacked Book, Δ+1, Stair
 Factor e o número de Grundy (PDG, BBG e PLI) reproduzem os valores dos CSVs originais.
+
+## v2 — Branch and Bound melhorado (`src/v2/`)
+
+`bbg_v2(g, ub)` mantém a árvore de busca do BBG do TCC e acrescenta:
+
+1. **Poda válida.** O BBG original podava quando a maior cor usada *até o momento*
+   era menor que o LB, mas os vértices restantes ainda podem receber cores maiores.
+   Por isso ele **não é exato**: em 2000 grafos aleatórios pequenos devolveu um valor
+   menor que o ótimo em 33. A v2 poda quando
+   `max(cor_maxima, max_{u não colorido} min(d(u)+1, UB)) ≤ LB`.
+2. **Parada antecipada** quando LB = UB.
+3. **LB inicial heurístico** (LB-DEG e coloração gulosa na ordem de decomposição) em
+   vez de 0.
+4. **Verificação incremental da propriedade de Grundy.** Um vértice de cor `c` precisa
+   de vizinhos com todas as cores `1..c-1`, e cada vizinho sem cor fornece no máximo
+   uma. O ramo é podado assim que `faltam(w) > vizinhos_sem_cor(w)`, a um custo de
+   O(Δ) por atribuição. Toda folha alcançada já é uma coloração de Grundy.
+
+```julia
+bbg_v2(g, grau_maximo(g) + 1)      # exato
+```
+
+```bash
+# BBG original × BBG v2 nas instâncias do TCC (UB = DELTA, STF ou 6; limite em segundos)
+julia --project=. experimentos/v2/comparar_bbg.jl STF 30
+```
+
+Algoritmos `BB2_DELTA`, `BB2_STF` e `BB2_6` também estão disponíveis nos scripts de
+experimentos.
+
+> **Atenção — Stair Factor:** a função `stair_factor` reproduz fielmente o cálculo do
+> TCC, mas **não é um limite superior válido em todo grafo**. Exemplo: arestas
+> `(1,3),(1,4),(2,4),(2,5),(3,5),(3,6),(5,6)` têm Γ = 4 e `stair_factor` = 3. Nas
+> instâncias do TCC isso não ocorre. Para garantir o ótimo use UB = Δ+1.
 
 ## Diferenças em relação ao Python
 
