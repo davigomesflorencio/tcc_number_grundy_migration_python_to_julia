@@ -13,6 +13,8 @@ Organização:
 - `exatos/`      algoritmos exatos: Programação Dinâmica (PDG) e Branch and Bound (BBG)
 - `v2/`          versões melhoradas (BBG v2: poda válida, parada antecipada,
                  LB heurístico e verificação incremental de Grundy)
+- `v3/`          BBG v3: busca de colorações parciais de Grundy (k-átomos) e
+                 limite superior por vértice
 - `pli/`         formulações de Programação Linear Inteira (F_N, F_DELTA, F_STF, F_PROD)
                  e modelos auxiliares de coloração própria
 
@@ -53,6 +55,10 @@ include("pli/modelos_coloracao.jl")
 # Versão 2 (melhorias sobre os algoritmos do TCC)
 include("v2/branch_and_bound.jl")
 
+# Versão 3 (busca de testemunhas / k-átomos)
+include("v3/limite_vertices.jl")
+include("v3/k_atomos.jl")
+
 export
     # grafos
     ler_gml, escrever_gml, grafo_aleatorio, grafo_stacked_book,
@@ -68,5 +74,7 @@ export
     pli_grundy, modelo_grundy, limite_formulacao, FORMULACOES,
     pli_numero_cromatico,
     # v2
-    bbg_v2
+    bbg_v2,
+    # v3
+    bbg_v3, limites_por_vertice, limite_superior_vertices
 end

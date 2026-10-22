@@ -2,3 +2,4 @@ Manifest.toml
 resultados/
 instancias_geradas/
 .ipynb_checkpoints/
+*_log.txt

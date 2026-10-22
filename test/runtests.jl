@@ -139,6 +139,40 @@ resolvido(l) = parse(Float64, l["tempo"]) < 900
         end
     end
 
+    @testset "v3: k-átomos e limite por vértice" begin
+        # limite por vértice: Γ(K_n) = n, Γ(P4) = 3; na estrela K_{1,6} (Γ = 2) o
+        # limite não é justo, mas cai de Δ+1 = 7 para 3
+        @test limite_superior_vertices(complete_graph(5)) == 5
+        @test limite_superior_vertices(star_graph(7)) == 3
+        @test limite_superior_vertices(path_graph(4)) == 3
+
+        # grafo em que o Stair Factor do TCC (3) fica abaixo de Γ = 4
+        g = SimpleGraph(6)
+        for (u, v) in [(1, 3), (1, 4), (2, 4), (2, 5), (3, 5), (3, 6), (5, 6)]
+            add_edge!(g, u, v)
+        end
+        @test stair_factor(g) == 3
+        @test limite_superior_vertices(g) >= 4
+        @test bbg_v3(g).grundy == 4
+
+        rng = MersenneTwister(2027)
+        for n in 1:11, p in (0.2, 0.35, 0.5, 0.65, 0.8), _ in 1:10
+            g = grafo_aleatorio(n, p; rng)
+            esperado = pdg(g).grundy
+            @test limite_superior_vertices(g) >= esperado
+            r = bbg_v3(g)
+            @test r.otimo
+            @test r.grundy == esperado
+            @test eh_coloracao_grundy(g, r.coloracao) && maximum(r.coloracao) == r.grundy
+        end
+
+        for l in ler_csv(joinpath(RAIZ, "dados", "PDG.csv"))
+            resolvido(l) || continue
+            g = ler_gml(joinpath(RAIZ, "instancias", "classe", "classe_graph_$(l["n"])_$(l["m"])"))
+            @test bbg_v3(g).grundy == grundy(l)
+        end
+    end
+
     @testset "Limite de tempo devolve melhor valor parcial" begin
         g = ler_gml(joinpath(RAIZ, "instancias", "random", "random_graph_0_30_0.5.gml"))
         r = bbg(g, nv(g); tempo_limite=0.5)

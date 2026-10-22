@@ -59,8 +59,10 @@ src/
   exatos/                      resultado.jl, programacao_dinamica.jl, branch_and_bound.jl
   pli/                         formulacao_grundy.jl, modelos_coloracao.jl
   v2/                          branch_and_bound.jl (BBG v2, ver seção "v2")
+  v3/                          k_atomos.jl, limite_vertices.jl (BBG v3, ver seção "v3")
 experimentos/                  scripts dos testes computacionais
   v2/                          comparar_bbg.jl (BBG original × BBG v2)
+  v3/                          avaliar_bbg_v3.jl (BBG v3 × melhores valores do TCC)
 test/runtests.jl               testes (inclui comparação com os resultados do TCC)
 instancias/                    instâncias originais (random/*.gml, classe/*)
 dados/, dados_random/, tempo/, TabelasTCC/   resultados originais do TCC (Python)
@@ -153,7 +155,44 @@ experimentos.
 > **Atenção — Stair Factor:** a função `stair_factor` reproduz fielmente o cálculo do
 > TCC, mas **não é um limite superior válido em todo grafo**. Exemplo: arestas
 > `(1,3),(1,4),(2,4),(2,5),(3,5),(3,6),(5,6)` têm Γ = 4 e `stair_factor` = 3. Nas
-> instâncias do TCC isso não ocorre. Para garantir o ótimo use UB = Δ+1.
+> instâncias do TCC isso não ocorre. Para garantir o ótimo use UB = Δ+1 ou
+> `limite_superior_vertices(g)` (v3).
+
+## v3 — Busca de testemunhas / k-átomos (`src/v3/`)
+
+`bbg_v3(g)` não colore o grafo inteiro. Ele usa o fato de que
+
+> Γ(G) ≥ k ⇔ existe uma **coloração parcial de Grundy** (coloração própria de um
+> subconjunto S em que todo vértice de cor c tem, em S, vizinhos com as cores
+> 1..c-1) com algum vértice de cor k.
+
+Essa coloração parcial sempre se estende a uma coloração de Grundy completa pelo
+algoritmo guloso (vértices de S primeiro, em ordem crescente de cor). A busca
+escolhe uma raiz com cor k e, a cada passo, a demanda mais restrita (vértice `w` de
+cor `c` sem vizinho de cor `j < c`), ramificando sobre qual vizinho de `w` recebe a
+cor `j`. A testemunha tem no máximo **2^(k-1)** vértices (o tamanho de um k-átomo),
+qualquer que seja n.
+
+- **Teste "Γ ≥ k?"**: O(n · Δ^(2^(k-1)) · k·Δ²), polinomial para k fixo.
+- **Algoritmo**: testa k = LB+1, LB+2, … até a primeira resposta negativa. Cada
+  resposta positiva é completada gulosamente e pode saltar vários valores de k.
+
+O v3 também traz um **limite superior por vértice**, `limites_por_vertice(g)`:
+partindo de `b(v) = d(v)+1`, itera-se até o ponto fixo
+`b(v) = 1 + max{t : v tem vizinhos u_1..u_t com b(u_i) ≥ i}`. O valor
+`limite_superior_vertices(g) = max b(v)` é **sempre** um limite superior válido para
+Γ(G), ao contrário do `stair_factor` do TCC. Também restringe quais vértices podem
+receber cada cor durante a busca.
+
+```julia
+bbg_v3(g)                          # exato, UB = limite_superior_vertices(g)
+bbg_v3(g; tempo_limite = 60)
+```
+
+```bash
+# v3 nas instâncias do TCC, comparado com o melhor valor obtido no TCC
+julia --project=. experimentos/v3/avaliar_bbg_v3.jl 30
+```
 
 ## Diferenças em relação ao Python
 
