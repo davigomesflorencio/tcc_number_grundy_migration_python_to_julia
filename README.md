@@ -252,6 +252,56 @@ julia --project=. experimentos/v4/avaliar_bbg_v4.jl 30
 Ainda não implementado na v4: tabela de transposição, poda de Hall, quebra de
 simetria nas raízes e LB por busca local.
 
+## Resultados: BBG v1 × v2 × v3 × v4
+
+Instâncias resolvidas (otimalidade provada) nas 156 instâncias do TCC.
+
+**Configuração:** 30 s por instância e por algoritmo; Julia 1.13, HiGHS, Windows 11,
+uma thread. v1 e v2 usam UB = Stair Factor (como o BB_STF do TCC); v3 e v4 usam os
+próprios limites. A comparação v1 × v2 rodou ao mesmo tempo que as avaliações da v3
+e da v4, então os tempos medidos podem estar um pouco piores que o normal. A linha
+"TCC" conta uma instância como resolvida se **algum** algoritmo do TCC (PD, BB ou
+PLI, com SCIP) terminou em até 900 s.
+
+| Algoritmo | Stacked Book (56) | Aleatórias (100) | **Total (156)** |
+|-----------|-------------------|------------------|-----------------|
+| v1 — BBG do TCC | 11 | 42 | **53** |
+| v2 — poda válida, LB heurístico, verificação incremental | 28 | 55 | **83** |
+| v3 — k-átomos, limite por vértice | 51 | 67 | **118** |
+| **v4 — k-átomos, limite por aresta** | **56** | **69** | **125** |
+| TCC (melhor entre PD, BB e PLI, 900 s) | 56 | 72 | 128 |
+
+- De v1 para v4, as instâncias resolvidas passam de 53 para 125, com o mesmo limite de
+  30 s. A v4 fica a 3 instâncias do TCC usando 1/30 do tempo.
+- A v4 resolve **todas** as Stacked Book, cada uma em milissegundos: o limite por
+  aresta é igual a Γ, então basta encontrar a testemunha.
+
+  | Stacked Book | v3 | v4 |
+  |--------------|----|----|
+  | 5×9 | 5, estourou 30 s | 5, ótimo, 0,0 s |
+  | 6×9 a 9×9 | 5, estourou 30 s | 6, ótimo, 0,0 s |
+
+- Em 80 instâncias, a v4 encontra Γ igual ao seu limite superior, e a prova de ótimo
+  sai sem refutar Γ+1.
+- Em 5 aleatórias não resolvidas, a v4 encontra valores maiores que a v3 (por
+  exemplo, `random_4_25_0.7`: 13 → 15).
+- Nas instâncias resolvidas, v1 e v2 deram o mesmo valor que a v4. Os problemas do v1
+  (poda que pode descartar o ótimo) e do Stair Factor (que pode ficar abaixo de Γ)
+  aparecem em grafos aleatórios pequenos, mas não nas instâncias do TCC.
+- **Onde a v4 ainda não resolve:** 31 aleatórias densas (p = 0,9; p = 0,7 com n ≥ 20;
+  p = 0,5 com n = 25, além de `random_0_20_0.5`). Nelas o limite por aresta fica perto
+  de n (por exemplo, 24 ou 25 com Γ ≈ 16), e a busca trava na refutação de Γ+1.
+  Possíveis próximos passos: tabela de transposição, poda de Hall e usar a PLI quando
+  a busca empacar.
+
+Para reproduzir (os CSVs vão para `resultados/`, que fica fora do Git):
+
+```bash
+julia --project=. experimentos/v2/comparar_bbg.jl STF 30     # v1 × v2
+julia --project=. experimentos/v3/avaliar_bbg_v3.jl 30       # v3
+julia --project=. experimentos/v4/avaliar_bbg_v4.jl 30       # v4 (lê o CSV da v3)
+```
+
 ## Atenção: valores do TCC em execuções que estouraram 900 s
 
 Nos CSVs originais (`dados/`, `dados_random/`), as linhas com `tempo = 900` **não
