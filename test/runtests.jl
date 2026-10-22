@@ -173,6 +173,35 @@ resolvido(l) = parse(Float64, l["tempo"]) < 900
         end
     end
 
+    @testset "v4: limite por aresta" begin
+        @test limite_superior_arestas(star_graph(7)) == 2          # v3 dava 3
+        @test limite_superior_arestas(complete_graph(5)) == 5
+        @test limite_superior_arestas(path_graph(4)) == 3
+
+        rng = MersenneTwister(2028)
+        for n in 1:11, p in (0.2, 0.35, 0.5, 0.65, 0.8), _ in 1:10
+            g = grafo_aleatorio(n, p; rng)
+            esperado = pdg(g).grundy
+            ub = limite_superior_arestas(g)
+            @test esperado <= ub <= limite_superior_vertices(g)
+            r = bbg_v4(g)
+            @test r.otimo
+            @test r.grundy == esperado
+            @test eh_coloracao_grundy(g, r.coloracao) && maximum(r.coloracao) == r.grundy
+        end
+
+        # Stacked Book: o limite por aresta é igual a Γ em todas as instâncias do TCC
+        for l in ler_csv(joinpath(RAIZ, "dados", "PDG.csv"))
+            resolvido(l) || continue
+            g = ler_gml(joinpath(RAIZ, "instancias", "classe", "classe_graph_$(l["n"])_$(l["m"])"))
+            @test limite_superior_arestas(g) == grundy(l)
+            @test bbg_v4(g).grundy == grundy(l)
+        end
+        for n in 2:9, m in 3:9
+            @test limite_superior_arestas(grafo_stacked_book(n, m)) <= 6
+        end
+    end
+
     @testset "Limite de tempo devolve melhor valor parcial" begin
         g = ler_gml(joinpath(RAIZ, "instancias", "random", "random_graph_0_30_0.5.gml"))
         r = bbg(g, nv(g); tempo_limite=0.5)

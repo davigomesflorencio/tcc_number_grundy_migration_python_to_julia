@@ -25,7 +25,9 @@
 mutable struct EstadoKAtomo
     const g::SimpleGraph{Int}
     const k::Int
-    const b::Vector{Int}                 # limites_por_vertice
+    const b::Vector{Int}                 # limite da cor de cada vértice
+    const entrada::Vector{Vector{Int}}   # entrada[w][i]: limite da cor do i-ésimo vizinho de w
+                                         # quando ele é testemunha de w (v3: b do vizinho)
     const prazo::Float64
     const coloracao::Vector{Int}
     const contagem::Matrix{Int}          # contagem[j, w] = nº de vizinhos de w com cor j
@@ -44,11 +46,23 @@ O limite superior padrão é `limite_superior_vertices(g)`, que é sempre válid
 function bbg_v3(g::SimpleGraph; limite_superior::Union{Nothing,Integer}=nothing,
                 tempo_limite::Real=900.0)
     inicio = time()
-    prazo = inicio + tempo_limite
-    n = nv(g)
-    n == 0 && return Resultado(0, true, time() - inicio, Int[])
-
+    nv(g) == 0 && return Resultado(0, true, 0.0, Int[])
     b = limites_por_vertice(g)
+    return _grundy_por_testemunhas(g, b, entrada_por_vertice(g, b), limite_superior, tempo_limite, inicio)
+end
+
+"""
+    entrada_por_vertice(g, b) -> Vector{Vector{Int}}
+
+Limites de "entrada" sem informação de aresta: o i-ésimo vizinho `u` de `w` tem
+limite `b[u]`.
+"""
+entrada_por_vertice(g::SimpleGraph, b::Vector{Int}) = [b[neighbors(g, w)] for w in vertices(g)]
+
+# Laço externo comum à v3 e à v4: testa Γ ≥ LB+1, LB+2, ... até a primeira negativa.
+function _grundy_por_testemunhas(g::SimpleGraph, b::Vector{Int}, entrada::Vector{Vector{Int}},
+                                 limite_superior, tempo_limite::Real, inicio::Float64=time())
+    prazo = inicio + tempo_limite
     ub = maximum(b)
     limite_superior === nothing || (ub = min(ub, Int(limite_superior)))
 
@@ -58,7 +72,7 @@ function bbg_v3(g::SimpleGraph; limite_superior::Union{Nothing,Integer}=nothing,
 
     try
         while lb < ub
-            parcial = _existe_coloracao_parcial(g, lb + 1, b, prazo)
+            parcial = _existe_coloracao_parcial(g, lb + 1, b, prazo; entrada)
             parcial === nothing && break                      # Γ(G) < lb + 1
             k, coloracao = _completar_gulosamente(g, parcial)
             (lb, melhor) = (k, coloracao)
@@ -78,13 +92,14 @@ function _completar_gulosamente(g::SimpleGraph, parcial::Vector{Int})
 end
 
 """
-    _existe_coloracao_parcial(g, k, b, prazo) -> Union{Vector{Int}, Nothing}
+    _existe_coloracao_parcial(g, k, b, prazo; entrada) -> Union{Vector{Int}, Nothing}
 
 Coloração parcial de Grundy em que algum vértice tem a cor `k`, ou `nothing`.
 """
-function _existe_coloracao_parcial(g::SimpleGraph, k::Int, b::Vector{Int}, prazo::Float64)
+function _existe_coloracao_parcial(g::SimpleGraph, k::Int, b::Vector{Int}, prazo::Float64;
+                                   entrada::Vector{Vector{Int}}=entrada_por_vertice(g, b))
     n = nv(g)
-    estado = EstadoKAtomo(g, k, b, prazo, fill(SEM_COR, n), zeros(Int, k, n), Int[], falses(n), 0)
+    estado = EstadoKAtomo(g, k, b, entrada, prazo, fill(SEM_COR, n), zeros(Int, k, n), Int[], falses(n), 0)
     raizes = sort!(filter(v -> b[v] >= k, collect(vertices(g))); by=v -> (b[v], degree(g, v)), rev=true)
     for r in raizes
         _colorir!(estado, r, k)
@@ -95,8 +110,9 @@ function _existe_coloracao_parcial(g::SimpleGraph, k::Int, b::Vector{Int}, prazo
     return nothing
 end
 
-@inline function _pode_receber(estado::EstadoKAtomo, u::Int, j::Int)
-    estado.coloracao[u] == SEM_COR && estado.b[u] >= j && estado.contagem[j, u] == 0 &&
+# `u` (o i-ésimo vizinho de w) pode receber a cor j como testemunha de w?
+@inline function _pode_receber(estado::EstadoKAtomo, w::Int, i::Int, u::Int, j::Int)
+    estado.coloracao[u] == SEM_COR && estado.entrada[w][i] >= j && estado.contagem[j, u] == 0 &&
         !(j == estado.k && estado.proibido_k[u])
 end
 
@@ -115,8 +131,8 @@ function _buscar!(estado::EstadoKAtomo)
             contagem[j, w] > 0 && continue
             faltam += 1
             qtd = 0
-            for u in neighbors(g, w)
-                _pode_receber(estado, u, j) && (qtd += 1)
+            for (i, u) in enumerate(neighbors(g, w))
+                _pode_receber(estado, w, i, u, j) && (qtd += 1)
             end
             qtd == 0 && return false
             qtd < melhor_qtd && ((melhor_w, melhor_j, melhor_qtd) = (w, j, qtd))
@@ -128,7 +144,7 @@ function _buscar!(estado::EstadoKAtomo)
     end
     melhor_w == 0 && return true             # nenhuma demanda: coloração parcial de Grundy
 
-    candidatos = [u for u in neighbors(g, melhor_w) if _pode_receber(estado, u, melhor_j)]
+    candidatos = [u for (i, u) in enumerate(neighbors(g, melhor_w)) if _pode_receber(estado, melhor_w, i, u, melhor_j)]
     sort!(candidatos; by=u -> (estado.b[u], degree(g, u)), rev=true)
     for u in candidatos
         _colorir!(estado, u, melhor_j)

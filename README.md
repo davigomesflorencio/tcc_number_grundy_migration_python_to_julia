@@ -60,9 +60,11 @@ src/
   pli/                         formulacao_grundy.jl, modelos_coloracao.jl
   v2/                          branch_and_bound.jl (BBG v2, ver seção "v2")
   v3/                          k_atomos.jl, limite_vertices.jl (BBG v3, ver seção "v3")
+  v4/                          limite_arestas.jl, k_atomos_arestas.jl (BBG v4, ver seção "v4")
 experimentos/                  scripts dos testes computacionais
   v2/                          comparar_bbg.jl (BBG original × BBG v2)
   v3/                          avaliar_bbg_v3.jl (BBG v3 × melhores valores do TCC)
+  v4/                          avaliar_bbg_v4.jl (BBG v4 × v3 × valores do TCC)
 test/runtests.jl               testes (inclui comparação com os resultados do TCC)
 instancias/                    instâncias originais (random/*.gml, classe/*)
 dados/, dados_random/, tempo/, TabelasTCC/   resultados originais do TCC (Python)
@@ -204,6 +206,51 @@ bbg_v3(g; tempo_limite = 60)
 # v3 nas instâncias do TCC, comparado com o melhor valor obtido no TCC
 julia --project=. experimentos/v3/avaliar_bbg_v3.jl 30
 ```
+
+## v4 — Limite superior por aresta (`src/v4/`)
+
+`bbg_v4(g)` é a busca de k-átomos da v3 com um limite mais forte. Para cada aresta
+orientada u→v, a mensagem m(u→v) limita a cor de `u` **quando `v` tem cor maior**
+(isto é, quando `u` é testemunha de `v`). Nesse caso `v` não pode ser testemunha de
+`u`, então só os outros vizinhos contam:
+
+```
+m(u→v) = 1 + T({ m(x→u) : x ∈ N(u) \ {v} })        (ponto fixo, partindo de d(u))
+b(v)   = 1 + T({ m(u→v) : u ∈ N(v) })
+T(β)   = max{ t : β em ordem decrescente, β_i ≥ t − i + 1 para i = 1..t }
+```
+
+`limite_superior_arestas(g) = max b(v)` é sempre válido e nunca maior que o
+`limite_superior_vertices` da v3. Na busca, um vizinho `u` só é candidato a
+testemunha de cor `j` para `w` se m(u→w) ≥ j.
+
+| Grafo | Δ+1 | Stair Factor | v3 (vértice) | **v4 (aresta)** | Γ |
+|-------|-----|--------------|--------------|-----------------|---|
+| Estrela K₁,₆ | 7 | — | 3 | **2** | 2 |
+| Stacked Book 2×9 | 11 | 4 | 5 | **4** | 4 |
+| Stacked Book 9×9 | 12 | 12 | 7 | **6** | 6 |
+
+- Em **todas as 56 instâncias Stacked Book** do TCC, o limite por aresta é igual a
+  Γ. Nessa classe a v4 só precisa encontrar a testemunha, sem refutar Γ+1.
+- Em 1650 grafos aleatórios pequenos, a distância média até Γ caiu de 0,99 (v3) para
+  0,59 (v4).
+- Para Stacked Book, o limite 6 do TCC (F_PROD) tem uma prova direta: folhas têm
+  grau ≤ 3; se o centro tem cor ≥ 4, as folhas dele só usam as duas folhas vizinhas
+  como testemunhas (cor ≤ 3); então um centro tem cor ≤ 1 + 3 + 2 = 6. O limite por
+  aresta reproduz esse argumento automaticamente.
+
+```julia
+limite_superior_arestas(g)        # UB válido
+bbg_v4(g; tempo_limite = 60)      # exato
+pli_grundy(g, limite_superior_arestas(g))   # PLI com o UB por aresta
+```
+
+```bash
+julia --project=. experimentos/v4/avaliar_bbg_v4.jl 30
+```
+
+Ainda não implementado na v4: tabela de transposição, poda de Hall, quebra de
+simetria nas raízes e LB por busca local.
 
 ## Atenção: valores do TCC em execuções que estouraram 900 s
 

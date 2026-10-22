@@ -15,6 +15,7 @@ Organização:
                  LB heurístico e verificação incremental de Grundy)
 - `v3/`          BBG v3: busca de colorações parciais de Grundy (k-átomos) e
                  limite superior por vértice
+- `v4/`          BBG v4: k-átomos com limite superior por aresta
 - `pli/`         formulações de Programação Linear Inteira (F_N, F_DELTA, F_STF, F_PROD)
                  e modelos auxiliares de coloração própria
 
@@ -59,6 +60,10 @@ include("v2/branch_and_bound.jl")
 include("v3/limite_vertices.jl")
 include("v3/k_atomos.jl")
 
+# Versão 4 (k-átomos com limite por aresta)
+include("v4/limite_arestas.jl")
+include("v4/k_atomos_arestas.jl")
+
 export
     # grafos
     ler_gml, escrever_gml, grafo_aleatorio, grafo_stacked_book,
@@ -76,5 +81,7 @@ export
     # v2
     bbg_v2,
     # v3
-    bbg_v3, limites_por_vertice, limite_superior_vertices
+    bbg_v3, limites_por_vertice, limite_superior_vertices,
+    # v4
+    bbg_v4, limites_por_aresta, limite_superior_arestas
 end

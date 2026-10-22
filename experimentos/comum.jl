@@ -25,6 +25,9 @@ const ALGORITMOS = Dict{String,Function}(
     "BB2_6"     => (g, t) -> bbg_v2(g, 6; tempo_limite=t),
     # v3
     "BB3"       => (g, t) -> bbg_v3(g; tempo_limite=t),
+    # v4
+    "BB4"       => (g, t) -> bbg_v4(g; tempo_limite=t),
+    "PLI_ARESTA" => (g, t) -> pli_grundy(g, limite_superior_arestas(g); tempo_limite=t),
 )
 
 densidade(g) = nv(g) <= 1 ? 0.0 : 2ne(g) / (nv(g) * (nv(g) - 1))
@@ -65,3 +68,60 @@ function aquecer(nome)
     ALGORITMOS[nome](g, 60.0)
     return nothing
 end
+
+# ---------------------------------------------------------------------------
+# Instâncias e valores de referência do TCC
+
+"""
+    instancias_tcc() -> Vector{Tuple{String,String}}
+
+As 156 instâncias do TCC como pares (nome, caminho): 56 Stacked Book e 100 aleatórias.
+"""
+function instancias_tcc()
+    instancias = Tuple{String,String}[]
+    for n in 2:9, m in 3:9
+        push!(instancias, ("classe_$(n)_$(m)", joinpath(RAIZ, "instancias", "classe", "classe_graph_$(n)_$(m)")))
+    end
+    for n in (10, 15, 20, 25), p in (0.1, 0.3, 0.5, 0.7, 0.9), i in 0:4
+        push!(instancias, ("random_$(i)_$(n)_$(p)", joinpath(RAIZ, "instancias", "random", "random_graph_$(i)_$(n)_$(p).gml")))
+    end
+    return instancias
+end
+
+# Só são confiáveis os valores do TCC de execuções que terminaram antes de 900 s:
+# nas que estouraram, o Python gravava `config.k`, que podia vir de outra instância
+# (ver README, seção "Atenção: valores do TCC em execuções que estouraram 900 s").
+const LIMITE_TCC = 900.0
+
+# Por instância: maior valor do TCC entre execuções concluídas (`confiavel`, 0 se
+# nenhuma terminou) e maior valor entre execuções que estouraram o tempo (`estourado`).
+function valores_tcc(diretorio, chave)
+    valores = Dict{String,NamedTuple{(:confiavel, :estourado, :resolveu),Tuple{Int,Int,Bool}}}()
+    for arquivo in filter(endswith(".csv"), readdir(joinpath(RAIZ, diretorio); join=true))
+        linhas = readlines(arquivo)
+        cab = split(linhas[1], ",")
+        contador = Dict{String,Int}()
+        for l in linhas[2:end]
+            isempty(l) && continue
+            d = Dict(zip(cab, split(l, ",")))
+            id = chave(d, contador)
+            valor = round(Int, parse(Float64, d["grundy"]))
+            terminou = parse(Float64, d["tempo"]) < LIMITE_TCC
+            a = get(valores, id, (confiavel=0, estourado=0, resolveu=false))
+            valores[id] = terminou ?
+                (confiavel=max(a.confiavel, valor), estourado=a.estourado, resolveu=true) :
+                (confiavel=a.confiavel, estourado=max(a.estourado, valor), resolveu=a.resolveu)
+        end
+    end
+    return valores
+end
+
+chave_classe(d, _) = "classe_$(d["n"])_$(d["m"])"
+function chave_random(d, contador)
+    base = "$(d["vertices"])_$(d["prob"])"
+    i = get(contador, base, 0)
+    contador[base] = i + 1
+    return "random_$(i)_$(base)"
+end
+
+valores_tcc() = merge(valores_tcc("dados", chave_classe), valores_tcc("dados_random", chave_random))
