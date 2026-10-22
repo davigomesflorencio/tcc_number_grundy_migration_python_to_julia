@@ -16,6 +16,7 @@ Organização:
 - `v3/`          BBG v3: busca de colorações parciais de Grundy (k-átomos) e
                  limite superior por vértice
 - `v4/`          BBG v4: k-átomos com limite superior por aresta
+- `v5/`          BBG v5: v4 + tabela de transposição + poda de Hall
 - `pli/`         formulações de Programação Linear Inteira (F_N, F_DELTA, F_STF, F_PROD)
                  e modelos auxiliares de coloração própria
 
@@ -64,6 +65,9 @@ include("v3/k_atomos.jl")
 include("v4/limite_arestas.jl")
 include("v4/k_atomos_arestas.jl")
 
+# Versão 5 (v4 + tabela de transposição + poda de Hall)
+include("v5/k_atomos_v5.jl")
+
 export
     # grafos
     ler_gml, escrever_gml, grafo_aleatorio, grafo_stacked_book,
@@ -83,5 +87,7 @@ export
     # v3
     bbg_v3, limites_por_vertice, limite_superior_vertices,
     # v4
-    bbg_v4, limites_por_aresta, limite_superior_arestas
+    bbg_v4, limites_por_aresta, limite_superior_arestas,
+    # v5
+    bbg_v5, EstatisticasV5
 end

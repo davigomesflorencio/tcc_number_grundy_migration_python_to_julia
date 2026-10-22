@@ -61,6 +61,7 @@ src/
   v2/                          branch_and_bound.jl (BBG v2, ver seção "v2")
   v3/                          k_atomos.jl, limite_vertices.jl (BBG v3, ver seção "v3")
   v4/                          limite_arestas.jl, k_atomos_arestas.jl (BBG v4, ver seção "v4")
+  v5/                          k_atomos_v5.jl (BBG v5, ver seção "v5")
 experimentos/                  scripts dos testes computacionais
   v2/                          comparar_bbg.jl (BBG original × BBG v2)
   v3/                          avaliar_bbg_v3.jl (BBG v3 × melhores valores do TCC)
@@ -251,6 +252,49 @@ julia --project=. experimentos/v4/avaliar_bbg_v4.jl 30
 
 Ainda não implementado na v4: tabela de transposição, poda de Hall, quebra de
 simetria nas raízes e LB por busca local.
+
+## v5 — Tabela de transposição e poda de Hall (`src/v5/`)
+
+`bbg_v5(g)` é a v4 com duas melhorias na busca de k-átomos:
+
+1. **Tabela de transposição.** A mesma coloração parcial pode ser alcançada por
+   caminhos diferentes da busca. Cada estado recebe um hash Zobrist de 128 bits,
+   atualizado em O(1); estados que falharam são guardados e não são explorados de
+   novo. A falha depende só do estado, de k e das raízes proibidas (que só
+   aumentam), então a memoização é válida. A tabela é zerada a cada k, tem tamanho
+   máximo (`max_transposicoes`) e só guarda estados com subárvore de pelo menos
+   `min_subarvore` nós.
+2. **Poda de Hall** (opcional, `hall=true`). Para cada vértice colorido, procura um
+   emparelhamento entre as cores que faltam e os vizinhos sem cor que podem
+   recebê-las (algoritmo de Kuhn). O emparelhamento só é calculado quando alguma cor
+   tem menos candidatos do que o número de cores faltantes; caso contrário a
+   condição de Hall vale automaticamente.
+
+**Medições** (60 s, mesma máquina):
+
+| Instância | v4 | v5 (padrão: só transposição) | v5 com Hall |
+|-----------|----|------------------------------|-------------|
+| random_1_20_0.5 | 18,1 M nós, 9,7 s | 15,4 M nós (−15%), 9,2 s | 15,1 M nós, 12,4 s |
+| random_0_20_0.5 | 38,1 s | 35,4 s | 43,8 s |
+| random_0_15_0.7 | 6,6 M nós, 1,8 s | 5,4 M nós (−18%), 1,7 s | 5,4 M nós, 1,7 s |
+| random_*_15_0.9 | > 60 s | > 60 s | > 60 s |
+
+- **Transposição:** reduz 15–18% dos nós e ~5% do tempo. Ajuda pouco porque a
+  escolha da demanda é determinística, e caminhos diferentes chegando ao mesmo estado
+  são raros.
+- **Hall:** reduz só ~2,5% dos nós e deixa a busca 10–25% mais lenta. A escolha da
+  demanda mais restrita (MRV) já detecta o mesmo conflito um nó depois: se duas
+  cores dependem do mesmo único vizinho, o MRV colore esse vizinho com uma delas e a
+  outra fica sem candidato no nó seguinte. Por isso vem desligada por padrão.
+- **Grafos densos (p = 0,9):** nenhuma das duas ajuda; a poda de Hall não poda
+  nenhum ramo ali. O gargalo continua sendo a refutação de Γ+1 com limite
+  superior ≈ n. A próxima ideia promissora é usar a PLI quando a busca empacar.
+
+```julia
+bbg_v5(g)                                    # transposição (padrão)
+bbg_v5(g; hall = true)                       # + poda de Hall
+e = EstatisticasV5(); bbg_v5(g; estatisticas = e); e   # nós, podas e estados guardados
+```
 
 ## Resultados: BBG v1 × v2 × v3 × v4
 

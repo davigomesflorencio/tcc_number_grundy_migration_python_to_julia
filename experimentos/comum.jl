@@ -28,6 +28,8 @@ const ALGORITMOS = Dict{String,Function}(
     # v4
     "BB4"       => (g, t) -> bbg_v4(g; tempo_limite=t),
     "PLI_ARESTA" => (g, t) -> pli_grundy(g, limite_superior_arestas(g); tempo_limite=t),
+    # v5
+    "BB5"       => (g, t) -> bbg_v5(g; tempo_limite=t),
 )
 
 densidade(g) = nv(g) <= 1 ? 0.0 : 2ne(g) / (nv(g) * (nv(g) - 1))

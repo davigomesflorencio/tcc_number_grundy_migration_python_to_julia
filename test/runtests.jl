@@ -202,6 +202,34 @@ resolvido(l) = parse(Float64, l["tempo"]) < 900
         end
     end
 
+    @testset "v5: tabela de transposição e poda de Hall" begin
+        rng = MersenneTwister(2029)
+        for n in 1:11, p in (0.2, 0.35, 0.5, 0.65, 0.8), _ in 1:8
+            g = grafo_aleatorio(n, p; rng)
+            esperado = pdg(g).grundy
+            # padrão (só transposição), com Hall, só Hall e guardando todo estado
+            for r in (bbg_v5(g), bbg_v5(g; hall=true), bbg_v5(g; hall=true, transposicao=false),
+                      bbg_v5(g; hall=true, min_subarvore=0))
+                @test r.otimo
+                @test r.grundy == esperado
+                @test eh_coloracao_grundy(g, r.coloracao) && maximum(r.coloracao) == r.grundy
+            end
+        end
+
+        # a poda de Hall é usada e a tabela guarda estados
+        g = ler_gml(joinpath(RAIZ, "instancias", "random", "random_graph_0_15_0.5.gml"))
+        e = EstatisticasV5()
+        r = bbg_v5(g; estatisticas=e, hall=true, min_subarvore=0)
+        @test r.otimo && r.grundy == bbg_v4(g).grundy
+        @test e.nos > 0 && e.estados_guardados > 0 && e.podas_hall > 0
+
+        for l in ler_csv(joinpath(RAIZ, "dados", "PDG.csv"))
+            resolvido(l) || continue
+            g = ler_gml(joinpath(RAIZ, "instancias", "classe", "classe_graph_$(l["n"])_$(l["m"])"))
+            @test bbg_v5(g).grundy == grundy(l)
+        end
+    end
+
     @testset "Limite de tempo devolve melhor valor parcial" begin
         g = ler_gml(joinpath(RAIZ, "instancias", "random", "random_graph_0_30_0.5.gml"))
         r = bbg(g, nv(g); tempo_limite=0.5)

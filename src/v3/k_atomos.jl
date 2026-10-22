@@ -59,9 +59,11 @@ limite `b[u]`.
 """
 entrada_por_vertice(g::SimpleGraph, b::Vector{Int}) = [b[neighbors(g, w)] for w in vertices(g)]
 
-# Laço externo comum à v3 e à v4: testa Γ ≥ LB+1, LB+2, ... até a primeira negativa.
+# Laço externo comum à v3, v4 e v5: testa Γ ≥ LB+1, LB+2, ... até a primeira
+# negativa. `existe(g, k, b, prazo; entrada)` é o teste "Γ ≥ k?" usado.
 function _grundy_por_testemunhas(g::SimpleGraph, b::Vector{Int}, entrada::Vector{Vector{Int}},
-                                 limite_superior, tempo_limite::Real, inicio::Float64=time())
+                                 limite_superior, tempo_limite::Real, inicio::Float64=time();
+                                 existe::F=_existe_coloracao_parcial) where {F}
     prazo = inicio + tempo_limite
     ub = maximum(b)
     limite_superior === nothing || (ub = min(ub, Int(limite_superior)))
@@ -72,7 +74,7 @@ function _grundy_por_testemunhas(g::SimpleGraph, b::Vector{Int}, entrada::Vector
 
     try
         while lb < ub
-            parcial = _existe_coloracao_parcial(g, lb + 1, b, prazo; entrada)
+            parcial = existe(g, lb + 1, b, prazo; entrada)
             parcial === nothing && break                      # Γ(G) < lb + 1
             k, coloracao = _completar_gulosamente(g, parcial)
             (lb, melhor) = (k, coloracao)
