@@ -17,8 +17,10 @@
 # então a testemunha tem no máximo T(k) = 1 + Σ_{j<k} T(j) = 2^(k-1) vértices
 # (o tamanho de um k-átomo, Zaker 2006), independentemente de n.
 #
-# Complexidade do teste "Γ ≥ k?": O(n · Δ^(2^(k-1)) · k·Δ²) — polinomial para k fixo.
-# O algoritmo testa k = LB+1, LB+2, ... até a primeira resposta negativa.
+# Complexidade do teste "Γ ≥ k?": O(n · k · W · Δ^W), com W = min(n, 2^(k-1)):
+# n raízes, profundidade ≤ W, ramificação ≤ Δ e O(W · k · Δ) por nó. Polinomial
+# para k fixo. O algoritmo testa k = LB+1, LB+2, ... até a primeira resposta
+# negativa (k = Γ+1), que domina o total: O(n · Γ · W · Δ^W) com W = min(n, 2^Γ).
 
 mutable struct EstadoKAtomo
     const g::SimpleGraph{Int}

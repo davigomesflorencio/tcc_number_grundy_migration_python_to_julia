@@ -173,9 +173,20 @@ cor `c` sem vizinho de cor `j < c`), ramificando sobre qual vizinho de `w` receb
 cor `j`. A testemunha tem no máximo **2^(k-1)** vértices (o tamanho de um k-átomo),
 qualquer que seja n.
 
-- **Teste "Γ ≥ k?"**: O(n · Δ^(2^(k-1)) · k·Δ²), polinomial para k fixo.
+- **Teste "Γ ≥ k?"**: O(n · k · W · Δ^W), com W = min(n, 2^(k-1)) — n raízes, árvore
+  de profundidade ≤ W com ramificação ≤ Δ, e O(W · k · Δ) por nó (percorre os
+  vértices coloridos, suas cores faltantes e seus vizinhos). Polinomial para k fixo:
+  O(n · Δ^(2^(k-1))) ⊆ O(n^(2^(k-1)+1)).
 - **Algoritmo**: testa k = LB+1, LB+2, … até a primeira resposta negativa. Cada
   resposta positiva é completada gulosamente e pode saltar vários valores de k.
+- **Total**: dominado pelo teste negativo k = Γ+1:
+  **O(n · Γ · W · Δ^W)** com W = min(n, 2^Γ). Memória O(k·n + m + Δ·W).
+
+| Versão | Pior caso | Expoente depende de |
+|--------|-----------|---------------------|
+| v1 | O((n+m)·(Δ+1)ⁿ) | n |
+| v2 | O(Δ·(Δ+1)ⁿ) | n |
+| v3 | O(n·Γ·W·Δ^W), W = min(n, 2^Γ) | Γ (limitado por n) |
 
 O v3 também traz um **limite superior por vértice**, `limites_por_vertice(g)`:
 partindo de `b(v) = d(v)+1`, itera-se até o ponto fixo
