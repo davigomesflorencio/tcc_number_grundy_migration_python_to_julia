@@ -205,6 +205,30 @@ bbg_v3(g; tempo_limite = 60)
 julia --project=. experimentos/v3/avaliar_bbg_v3.jl 30
 ```
 
+## Atenção: valores do TCC em execuções que estouraram 900 s
+
+Nos CSVs originais (`dados/`, `dados_random/`), as linhas com `tempo = 900` **não
+são confiáveis**. No laço de experimentos do Python, ao estourar o tempo
+(`signal.alarm(900)`) era gravado o valor de `config.k`, uma variável global que:
+
+- só era zerada **depois de uma execução bem-sucedida** (nos grafos aleatórios), e
+  por isso podia carregar o valor de uma instância anterior;
+- não era atualizada pelo `model_grundy` (PLI).
+
+Evidências (todas em linhas com `tempo = 900`), confirmadas por PD, PLI com n cores,
+BBG v2 e BBG v3 em Julia, e pelos PDG/PLI do próprio TCC:
+
+| Instância | Valor no CSV | Γ correto |
+|-----------|--------------|-----------|
+| Stacked Book 2×8, 2×9, 3×5…3×9 | BB_6 = 5, BB_DELTA = 5 (2×8, 2×9) | 4 |
+| Aleatórias n = 15 (p ≥ 0,3) | BB_DELTA = 9 em 17 grafos seguidos | 6, 7 ou 8 |
+| Aleatórias n = 25, p = 0,1 | PDG = 5 | 4 |
+
+Comparações de qualidade feitas a partir dessas linhas, como "o BBG supera o PBG
+na qualidade das soluções", devem ser revistas. O script
+`experimentos/v3/avaliar_bbg_v3.jl` só usa os valores de execuções concluídas e
+mostra os demais na coluna informativa `grundy_tcc_estourado`.
+
 ## Diferenças em relação ao Python
 
 - Vértices são `1:n` (o rótulo `k` das instâncias vira o vértice `k+1`); "sem cor" é `0`.
