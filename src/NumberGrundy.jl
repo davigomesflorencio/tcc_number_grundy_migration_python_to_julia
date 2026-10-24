@@ -17,7 +17,8 @@ Organização:
                  limite superior por vértice
 - `v4/`          BBG v4: k-átomos com limite superior por aresta
 - `v5/`          BBG v5: v4 + tabela de transposição + poda de Hall
-- `pli/`         formulações de Programação Linear Inteira (F_N, F_DELTA, F_STF, F_PROD)
+- `pli/`         formulações de Programação Linear Inteira (F_N, F_DELTA, F_STF, F_PROD),
+                 formulação de representantes
                  e modelos auxiliares de coloração própria
 
 Convenção: os vértices em Julia são `1:n`; o vértice `v` corresponde ao rótulo `v-1`
@@ -53,6 +54,7 @@ include("exatos/branch_and_bound.jl")
 # Programação Linear Inteira
 include("pli/formulacao_grundy.jl")
 include("pli/modelos_coloracao.jl")
+include("pli/formulacao_representantes.jl")
 
 # Versão 2 (melhorias sobre os algoritmos do TCC)
 include("v2/branch_and_bound.jl")
@@ -81,7 +83,7 @@ export
     Resultado, pdg, bbg,
     # pli
     pli_grundy, modelo_grundy, limite_formulacao, FORMULACOES,
-    pli_numero_cromatico,
+    pli_numero_cromatico, pli_representantes, modelo_representantes,
     # v2
     bbg_v2,
     # v3

@@ -59,6 +59,9 @@ resolvido(l) = parse(Float64, l["tempo"]) < 900
             @test pdg(g).grundy == esperado
             @test bbg(g, nv(g)).grundy == esperado
             @test pli_grundy(g, :n).grundy == esperado
+            r = pli_representantes(g, :n)
+            @test r.grundy == esperado
+            @test eh_coloracao_grundy(g, r.coloracao) && maximum(r.coloracao) == r.grundy
         end
         @test pli_numero_cromatico(cycle_graph(5)).grundy == 3
         @test lb_deg(path_graph(4))[1] <= 3
@@ -105,6 +108,9 @@ resolvido(l) = parse(Float64, l["tempo"]) < 900
         linhas = filter(l -> l["vertices"] == "10", ler_csv(joinpath(RAIZ, "dados_random", "PLI_STF.csv")))
         for (l, g) in zip(linhas, instancias_random(linhas))
             @test pli_grundy(g, :delta).grundy == grundy(l)
+            r = pli_representantes(g, :stf)
+            @test r.grundy == grundy(l)
+            @test eh_coloracao_grundy(g, r.coloracao)
             r = bbg(g, grau_maximo(g) + 1)
             @test r.grundy == grundy(l)
             @test eh_coloracao_grundy(g, r.coloracao)
