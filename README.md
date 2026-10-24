@@ -22,6 +22,7 @@ dos vértices. Determinar esse número é NP-completo.
 | **PDG** — Programação Dinâmica     | `lawler`                            | `pdg`                                  | `src/exatos/programacao_dinamica.jl` |
 | **BBG** — Branch and Bound         | `BAB`, `BABNumberGrundy`            | `bbg`                                  | `src/exatos/branch_and_bound.jl` |
 | **PLI** F_N / F_DELTA / F_STF / F_PROD | `model_grundy(G, ub)`           | `pli_grundy(G, :n / :delta / :stf / :prod)` | `src/pli/formulacao_grundy.jl` |
+| **PLI** de representantes          | — (nova em Julia)                   | `pli_representantes(G, ub)`            | `src/pli/formulacao_representantes.jl` |
 | PLI de coloração própria (χ)       | modelos do notebook `Original/`     | `pli_numero_cromatico`                 | `src/pli/modelos_coloracao.jl` |
 | Grafos aleatórios G(n,p)           | `generateGraph`                     | `grafo_aleatorio`                      | `src/grafos/geradores.jl` |
 | Grafos Stacked Book                | `generateStackedBookGraph`          | `grafo_stacked_book`                   | `src/grafos/geradores.jl` |
@@ -47,6 +48,46 @@ using SCIP
 pli_grundy(g, :stf; otimizador = SCIP.Optimizer)
 ```
 
+### Formulação de representantes
+
+`pli_representantes` adapta a formulação de representantes de Carvalho et al.
+(versão para o Grundy conexo em [arXiv:2411.14533](https://arxiv.org/abs/2411.14533),
+Seção 2.2) para o número de Grundy padrão, sem o índice de tempo e sem as
+restrições de conectividade. Cada classe de cor é representada pelo seu vértice de
+menor índice, e as cores não são indexadas:
+
+- `x[u,v] = 1` se `u` representa `v` (`u ≤ v`, `v` não adjacente a `u`);
+  `x[u,u] = 1` se `u` é representante;
+- `y[p,u] = 1` se a classe de `p` vem antes da classe de `u`.
+
+O objetivo maximiza `Σ x[u,u]`. As restrições garantem que:
+
+- cada vértice tem um único representante;
+- vértices adjacentes não têm o mesmo representante;
+- só um representante representa outros vértices;
+- se `y[p,u] = 1`, todo vértice da classe de `u` tem vizinho na classe de `p`
+  (propriedade de Grundy);
+- `y` é uma ordem total entre os representantes;
+- `Σ x[u,u] ≤ ub`.
+
+A transitividade de `y` (`y[p,u] + y[u,q] − y[p,q] ≤ 1`) não está na formulação
+consultada. Foi acrescentada porque, sem ela, um ciclo de classes A → B → C → A seria
+aceito mesmo sem existir ordem de Grundy válida. A cor de cada classe é 1 mais o
+número de representantes que vêm antes dela.
+
+O limite `ub` aceita um inteiro ou as mesmas `FORMULACOES` da `pli_grundy`. Sem
+argumento, usa o Stair Factor:
+
+```julia
+pli_representantes(g)                 # ub = Stair Factor
+pli_representantes(g, :delta)         # ou :n, :prod, ou um inteiro
+pli_representantes(g, :stf; otimizador = SCIP.Optimizer)
+```
+
+O modelo tem O(n²) variáveis e O(n³) restrições, por causa da propriedade de Grundy e
+da transitividade. Ele confere com a PDG em 96 grafos aleatórios com n de 5 a 12 e
+com os valores do TCC nas instâncias aleatórias de 10 vértices.
+
 ## Estrutura
 
 ```
@@ -57,7 +98,8 @@ src/
   limites/                     decomposicao.jl, stair_factor.jl, lb_deg.jl
   cliques/                     bron_kerbosch.jl
   exatos/                      resultado.jl, programacao_dinamica.jl, branch_and_bound.jl
-  pli/                         formulacao_grundy.jl, modelos_coloracao.jl
+  pli/                         formulacao_grundy.jl, formulacao_representantes.jl,
+                               modelos_coloracao.jl
   v2/                          branch_and_bound.jl (BBG v2, ver seção "v2")
   v3/                          k_atomos.jl, limite_vertices.jl (BBG v3, ver seção "v3")
   v4/                          limite_arestas.jl, k_atomos_arestas.jl (BBG v4, ver seção "v4")
@@ -94,6 +136,7 @@ pdg(g)                          # Programação Dinâmica (n ≤ 30)
 bbg(g, stair_factor(g))         # Branch and Bound
 pli_grundy(g, :stf)             # PLI F_STF
 pli_grundy(g, 6; tempo_limite = 60)
+pli_representantes(g)           # PLI de representantes (UB = Stair Factor)
 ```
 
 Todos os algoritmos exatos retornam um `Resultado` com os campos `grundy`, `otimo`,
