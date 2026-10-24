@@ -103,19 +103,138 @@ variável global `config.k` do Python.
 
 ## Experimentos
 
+Todos os scripts ficam em `experimentos/` e são executados a partir da raiz do
+projeto com `julia --project=.`. Os argumentos são posicionais e opcionais: para
+informar o terceiro, é preciso informar também o primeiro e o segundo.
+
+> **Atenção:** se o CSV de saída já existir, as novas linhas são **acrescentadas** ao
+> final (o cabeçalho não é reescrito). Para repetir um experimento do zero, apague o
+> CSV antes ou passe outro caminho de saída.
+
+### Algoritmos disponíveis
+
+Os scripts `experimento_random.jl` e `experimento_stacked_book.jl` recebem o nome
+do algoritmo, que é a chave do dicionário `ALGORITMOS` em `experimentos/comum.jl`:
+
+| Nome | Chamada | Limite superior |
+|------|---------|-----------------|
+| `PDG` | `pdg(g)` | — |
+| `BB_DELTA` | `bbg(g, Δ+1)` | Δ(G) + 1 |
+| `BB_STF` | `bbg(g, stair_factor(g))` | Stair Factor |
+| `BB_6` | `bbg(g, 6)` | 6 |
+| `PLI_N` | `pli_grundy(g, :n)` | n |
+| `PLI_DELTA` | `pli_grundy(g, :delta)` | Δ(G) + 1 |
+| `PLI_STF` | `pli_grundy(g, :stf)` | Stair Factor |
+| `PLI_6` | `pli_grundy(g, :prod)` | 6 |
+| `PLI_ARESTA` | `pli_grundy(g, limite_superior_arestas(g))` | limite por aresta (v4) |
+| `BB2_DELTA`, `BB2_STF`, `BB2_6` | `bbg_v2(g, ub)` | Δ+1, Stair Factor, 6 |
+| `BB3` | `bbg_v3(g)` | próprio (v3) |
+| `BB4` | `bbg_v4(g)` | próprio (v4) |
+| `BB5` | `bbg_v5(g)` | próprio (v4) + transposição |
+
+Antes da primeira instância, o algoritmo roda uma vez num grafo pequeno para que o
+tempo de compilação JIT não entre na medição. Uma execução que estoura o limite é
+registrada com `tempo = tempo_limite` e com o melhor valor encontrado, como no TCC,
+e o terminal mostra `(limite de tempo)`.
+
+### Grafos aleatórios — `experimento_random.jl`
+
 ```bash
-# Grafos aleatórios (n ∈ {10,15,20,25}, p ∈ {0.1,...,0.9}, 5 repetições)
-julia --project=. experimentos/experimento_random.jl PLI_DELTA [tempo_limite] [saida.csv]
-
-# Stacked Book (n ∈ 2..9, m ∈ 3..9)
-julia --project=. experimentos/experimento_stacked_book.jl BB_STF [tempo_limite] [saida.csv]
-
-# Gerar novas instâncias (em instancias_geradas/)
-julia --project=. experimentos/gerar_instancias.jl
+julia --project=. experimentos/experimento_random.jl [ALGORITMO] [TEMPO_LIMITE] [SAIDA]
 ```
 
-Algoritmos: `PDG`, `BB_DELTA`, `BB_STF`, `BB_6`, `PLI_N`, `PLI_DELTA`, `PLI_STF`, `PLI_6`.
-Os CSVs são gravados em `resultados/` com as mesmas colunas dos arquivos do TCC.
+| Argumento | Padrão |
+|-----------|--------|
+| `ALGORITMO` | `PLI_DELTA` |
+| `TEMPO_LIMITE` (s) | `900` |
+| `SAIDA` | `resultados/random/<ALGORITMO>.csv` |
+
+Instâncias: as 100 de `instancias/random/` (n ∈ {10, 15, 20, 25},
+p ∈ {0.1, 0.3, 0.5, 0.7, 0.9}, 5 repetições cada). Colunas do CSV: `prob, vertices,
+arestas, delta, stairfactor, densidade, grundy, tempo` (as mesmas de `dados_random/`).
+
+```bash
+julia --project=. experimentos/experimento_random.jl BB_STF 900
+julia --project=. experimentos/experimento_random.jl BB5 60 resultados/random/BB5_60s.csv
+```
+
+### Stacked Book — `experimento_stacked_book.jl`
+
+```bash
+julia --project=. experimentos/experimento_stacked_book.jl [ALGORITMO] [TEMPO_LIMITE] [SAIDA]
+```
+
+| Argumento | Padrão |
+|-----------|--------|
+| `ALGORITMO` | `PLI_6` |
+| `TEMPO_LIMITE` (s) | `900` |
+| `SAIDA` | `resultados/classe/<ALGORITMO>.csv` |
+
+Instâncias: as 56 de `instancias/classe/` (K_{1,m} □ P_n, n ∈ 2..9, m ∈ 3..9).
+Colunas do CSV: `n, m, vertices, arestas, delta, stairfactor, densidade, grundy,
+tempo` (as mesmas de `dados/`).
+
+```bash
+# PLI F_PROD com 20 s por instância
+julia --project=. experimentos/experimento_stacked_book.jl PLI_6 20 resultados/classe/PLI_6_20s.csv
+```
+
+Para rodar todas as formulações PLI em sequência (PowerShell):
+
+```powershell
+foreach ($a in "PLI_N","PLI_DELTA","PLI_STF","PLI_6","PLI_ARESTA") {
+    julia --project=. experimentos/experimento_stacked_book.jl $a 20 "resultados/classe/${a}_20s.csv"
+}
+```
+
+No bash:
+
+```bash
+for a in PLI_N PLI_DELTA PLI_STF PLI_6 PLI_ARESTA; do
+    julia --project=. experimentos/experimento_stacked_book.jl $a 20 resultados/classe/${a}_20s.csv
+done
+```
+
+### Comparações entre versões do BBG
+
+Estes scripts rodam nas 156 instâncias do TCC (56 Stacked Book + 100 aleatórias)
+e imprimem um resumo no final.
+
+| Script | Argumentos (padrão) | Saída padrão | O que compara |
+|--------|---------------------|--------------|---------------|
+| `v2/comparar_bbg.jl` | `[LIMITE=STF] [TEMPO_LIMITE=60] [SAIDA]`, `LIMITE ∈ DELTA, STF, 6` | `resultados/v2/comparacao_bbg_<LIMITE>.csv` | BBG original × BBG v2 com o mesmo UB |
+| `v3/avaliar_bbg_v3.jl` | `[TEMPO_LIMITE=30] [SAIDA]` | `resultados/v3/bbg_v3.csv` | BBG v3 × valores concluídos do TCC |
+| `v4/avaliar_bbg_v4.jl` | `[TEMPO_LIMITE=30] [SAIDA] [CSV_V3]` | `resultados/v4/bbg_v4.csv` | BBG v4 × v3 × TCC |
+
+O `avaliar_bbg_v4.jl` lê os resultados da v3 de `CSV_V3` (padrão
+`resultados/v3/bbg_v3.csv`) em vez de rodá-la de novo; rode a v3 antes para ter a
+comparação completa. Para guardar o log do terminal, como em
+`resultados_v4_log.txt`:
+
+```bash
+julia --project=. experimentos/v2/comparar_bbg.jl STF 30
+julia --project=. experimentos/v3/avaliar_bbg_v3.jl 30 > resultados_v3_log.txt
+julia --project=. experimentos/v4/avaliar_bbg_v4.jl 30 > resultados_v4_log.txt
+```
+
+A v5 ainda não tem script de comparação próprio; para rodá-la nas instâncias, use
+`BB5` nos scripts das seções anteriores.
+
+### Gerar novas instâncias — `gerar_instancias.jl`
+
+```bash
+julia --project=. experimentos/gerar_instancias.jl [DIRETORIO_SAIDA] [SEMENTE]
+```
+
+| Argumento | Padrão |
+|-----------|--------|
+| `DIRETORIO_SAIDA` | `instancias_geradas/` (não sobrescreve `instancias/`) |
+| `SEMENTE` | `2022` |
+
+Gera 250 grafos aleatórios (10 repetições, n ∈ {10, 15, 20, 25, 30},
+p ∈ {0.1, 0.3, 0.5, 0.7, 0.9}) e as 56 instâncias Stacked Book, em GML. Os scripts
+de experimento leem sempre de `instancias/`; para usar as instâncias geradas, troque
+o diretório ou copie os arquivos para lá.
 
 ## Testes
 
