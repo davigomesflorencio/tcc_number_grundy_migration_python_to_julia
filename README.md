@@ -174,6 +174,7 @@ do algoritmo, que é a chave do dicionário `ALGORITMOS` em `experimentos/comum.
 | `BB3` | `bbg_v3(g)` | próprio (v3) |
 | `BB4` | `bbg_v4(g)` | próprio (v4) |
 | `BB5` | `bbg_v5(g)` | próprio (v4) + transposição |
+| `PLI_REP` | `pli_representantes(g, :stf)` | Stair Factor |
 
 Antes da primeira instância, o algoritmo roda uma vez num grafo pequeno para que o
 tempo de compilação JIT não entre na medição. Uma execução que estoura o limite é
@@ -225,7 +226,7 @@ julia --project=. experimentos/experimento_stacked_book.jl PLI_6 20 resultados/c
 Para rodar todas as formulações PLI em sequência (PowerShell):
 
 ```powershell
-foreach ($a in "PLI_N","PLI_DELTA","PLI_STF","PLI_6","PLI_ARESTA") {
+foreach ($a in "PLI_N","PLI_DELTA","PLI_STF","PLI_6","PLI_ARESTA","PLI_REP") {
     julia --project=. experimentos/experimento_stacked_book.jl $a 20 "resultados/classe/${a}_20s.csv"
 }
 ```
@@ -233,7 +234,7 @@ foreach ($a in "PLI_N","PLI_DELTA","PLI_STF","PLI_6","PLI_ARESTA") {
 No bash:
 
 ```bash
-for a in PLI_N PLI_DELTA PLI_STF PLI_6 PLI_ARESTA; do
+for a in PLI_N PLI_DELTA PLI_STF PLI_6 PLI_ARESTA PLI_REP; do
     julia --project=. experimentos/experimento_stacked_book.jl $a 20 resultados/classe/${a}_20s.csv
 done
 ```
